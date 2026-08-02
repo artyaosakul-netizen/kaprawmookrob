@@ -1,0 +1,5 @@
+# Security: Do not commit sensitive environment files
+.env
+.env.local
+*.log
+.DS_Store

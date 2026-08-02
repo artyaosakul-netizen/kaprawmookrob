@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoodShield AI — ระบบปัญญาประดิษฐ์สนับสนุนการตัดสินใจเพื่อความมั่นคงทางอาหาร</title>
+  <meta name="description" content="ระบบวิเคราะห์ความเสี่ยงผลกระทบลูกคลื่นในระบบอาหารและการเกษตรด้วย Gemini AI">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Top Navigation & Status Bar -->
+    <header class="top-header">
+      <a href="index.html" class="brand-badge" style="text-decoration: none;">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M12 8v4"/>
+            <path d="M12 16h.01"/>
+          </svg>
+        </div>
+        <h1 class="brand-title">FoodShield AI</h1>
+      </a>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs">
+        <button class="nav-tab-btn active" data-tab="tool">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          🛡️ วิเคราะห์ความเสี่ยง
+        </button>
+        <button class="nav-tab-btn" data-tab="about">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          ℹ️ เกี่ยวกับโครงการ
+        </button>
+        <button class="nav-tab-btn" data-tab="guidance">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          📖 คู่มือรับมือ
+        </button>
+        <button class="nav-tab-btn" data-tab="research">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          🌐 ข้อมูลวิจัย
+        </button>
+      </nav>
+
+      <!-- Right Header Actions & Status -->
+      <div class="header-controls">
+        <!-- Presentation Slideshow Link -->
+        <a href="slideshow.html" class="header-action-btn slideshow-btn" title="ดูสไลด์นำเสนอโครงการ (Presentation Deck)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span>📊 สไลด์นำเสนอ</span>
+        </a>
+
+        <!-- Theme Toggle Button -->
+        <button id="themeToggleBtn" class="header-action-btn theme-toggle-btn" title="สลับธีม (ตามระบบ / มืด / สว่าง)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span>อุปกรณ์ (System)</span>
+        </button>
+
+        <div class="header-status">
+          <span class="pulse-dot"></span>
+          <span>ระบบพร้อมทำงาน</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ==================== VIEW 1: TOOL VIEW ==================== -->
+    <div id="toolView">
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-tag">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          ระบบเตือนภัยและป้องกันวิกฤตการเกษตรด้วย AI
+        </div>
+        <h2 class="hero-title">FoodShield <span>AI</span></h2>
+        <div class="hero-subtitle">คาดการณ์ • ป้องกัน • ปกป้อง</div>
+        <p class="hero-desc">
+          ระบบ AI ช่วยประเมินความเสี่ยงและแจ้งเตือนภัยการเกษตรล่วงหน้า เพื่อป้องกันปัญหาขาดแคลนอาหาร ผลกระทบปศุสัตว์ และราคาอาหารพุ่งสูง
+        </p>
+      </section>
+
+      <!-- Main Dashboard Grid -->
+      <main class="dashboard-grid">
+
+        <!-- LEFT: Form Card -->
+        <section class="glass-card">
+          <div class="card-header">
+            <div class="card-header-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.4 19 2c1 2 2 4.12 2 7 0 6-5.5 11-10 11z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+            </div>
+            <div>
+              <h3 class="card-title">🌱 กรอกข้อมูลพื้นที่การเกษตรของคุณ</h3>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">เลือกสถานการณ์จริงในพื้นที่เพื่อให้ AI ช่วยวิเคราะห์ความเสี่ยง</p>
+            </div>
+          </div>
+
+          <form id="riskForm">
+            <!-- 1. Crop Type -->
+            <div class="form-group">
+              <label class="form-label" for="cropType">1. ชนิดพืชหลักในพื้นที่</label>
+              <select id="cropType" class="form-select" required>
+                <option value="ข้าว (Rice)" selected>🌾 ข้าว (Rice)</option>
+                <option value="ข้าวโพด (Corn)">🌽 ข้าวโพด (Corn)</option>
+                <option value="ข้าวสาลี (Wheat)">🌾 ข้าวสาลี (Wheat)</option>
+                <option value="มันสำปะหลัง (Cassava)">🍠 มันสำปะหลัง (Cassava)</option>
+                <option value="อ้อย (Sugarcane)">🎋 อ้อย (Sugarcane)</option>
+                <option value="ผัก (Vegetables)">🥬 ผักสด (Vegetables)</option>
+                <option value="ผลไม้ (Fruit)">🍎 ผลไม้ (Fruit)</option>
+                <option value="อื่นๆ (Other)">📦 พืชอื่นๆ (Other)</option>
+              </select>
+            </div>
+
+            <!-- 2. Estimated Crop Damage Slider -->
+            <div class="form-group">
+              <div class="form-label">
+                <label for="cropDamage">2. ประเมินความเสียหายของพืชผล (% ของแปลง)</label>
+                <span id="cropDamageVal" class="slider-val">45%</span>
+              </div>
+              <input type="range" id="cropDamage" class="form-range" min="0" max="100" value="45">
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                <span>0% (ปกติ)</span>
+                <span>50% (เสียหายครึ่งหนึ่ง)</span>
+                <span>100% (เสียหายทั้งหมด)</span>
+              </div>
+            </div>
+
+            <!-- 3. Weather Conditions -->
+            <div class="form-group">
+              <label class="form-label" for="weather">3. สภาพอากาศในปัจจุบัน</label>
+              <select id="weather" class="form-select" required>
+                <option value="ปกติ (Normal)">☀️ ปกติ (Normal)</option>
+                <option value="ภัยแล้ง (Drought)">🌵 ภัยแล้ง / ฝนแล้ง (Drought)</option>
+                <option value="ฝนตกหนัก (Heavy Rain)" selected>🌧️ ฝนตกหนัก (Heavy Rain)</option>
+                <option value="น้ำท่วม (Flood)">🌊 น้ำท่วมขัง (Flood)</option>
+                <option value="ร้อนจัด/คลื่นความร้อน (Extreme Heat)">🔥 อากาศร้อนจัด (Extreme Heat)</option>
+                <option value="พายุ (Storm)">🌪️ พายุพัดแรง (Storm)</option>
+                <option value="ผิดปกติ/แปรปรวน (Unusual)">🌀 อากาศแปรปรวนผิดปกติ (Unusual)</option>
+              </select>
+            </div>
+
+            <!-- 4. Water Availability -->
+            <div class="form-group">
+              <label class="form-label" for="water">4. ปริมาณน้ำสำหรับการเกษตร</label>
+              <select id="water" class="form-select" required>
+                <option value="อุดมสมบูรณ์ (Abundant)">💧 อุดมสมบูรณ์ (เพียงพอมาก)</option>
+                <option value="ปกติ (Normal)">💧 ปกติ (เพียงพอตามฤดูกาล)</option>
+                <option value="มีจำกัด (Limited)">⚠️ เริ่มมีจำกัด</option>
+                <option value="น้อย (Low)" selected>🛑 น้ำน้อย (เริ่มขาดแคลน)</option>
+                <option value="วิกฤต (Critical)">🚨 ขาดแคลนวิกฤต</option>
+              </select>
+            </div>
+
+            <!-- 5. Pest / Disease Symptoms -->
+            <div class="form-group">
+              <label class="form-label">5. อาการผิดปกติที่พบในพืช (เลือกได้หลายข้อ)</label>
+              <div class="symptoms-grid" id="symptomsGrid">
+                <div>
+                  <input type="checkbox" id="sympNone" name="symptoms" value="ไม่มี" class="chip-checkbox">
+                  <label for="sympNone" class="chip-label">✅ ไม่พบอาการผิดปกติ</label>
+                </div>
+                <div>
+                  <input type="checkbox" id="sympDiscoloration" name="symptoms" value="ใบเปลี่ยนสี/ใบเหลือง" class="chip-checkbox" checked>
+                  <label for="sympDiscoloration" class="chip-label">🍂 ใบเหลือง / ใบเปลี่ยนสี</label>
+                </div>
+                <div>
+                  <input type="checkbox" id="sympWilting" name="symptoms" value="เหี่ยวเฉา" class="chip-checkbox">
+                  <label for="sympWilting" class="chip-label">🥀 เหี่ยวเฉา / ใบร่วง</label>
+                </div>
+                <div>
+                  <input type="checkbox" id="sympRot" name="symptoms" value="เน่า" class="chip-checkbox" checked>
+                  <label for="sympRot" class="chip-label">💧 เน่า / ลำต้นเสียหาย</label>
+                </div>
+                <div>
+                  <input type="checkbox" id="sympFungal" name="symptoms" value="เชื้อรา" class="chip-checkbox">
+                  <label for="sympFungal" class="chip-label">🍄 เชื้อรา / คราบขาว</label>
+                </div>
+                <div>
+                  <input type="checkbox" id="sympInsect" name="symptoms" value="แมลงทำลาย" class="chip-checkbox">
+                  <label for="sympInsect" class="chip-label">🐛 แมลง / ศัตรูพืชกัดกิน</label>
+                </div>
+                <div>
+                  <input type="checkbox" id="sympStunted" name="symptoms" value="แคระแกร็น" class="chip-checkbox">
+                  <label for="sympStunted" class="chip-label">🌱 ต้นแคระแกร็น ไม่เติบโต</label>
+                </div>
+                <div>
+                  <input type="checkbox" id="sympUnknown" name="symptoms" value="อาการไม่ทราบสาเหตุ" class="chip-checkbox">
+                  <label for="sympUnknown" class="chip-label">❓ ไม่ทราบสาเหตุแน่ชัด</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- 6. Nearby Farms Affected -->
+            <div class="form-group">
+              <label class="form-label">6. พื้นที่ใกล้เคียงพบปัญหาระบาดเหมือนกันหรือไม่?</label>
+              <div class="segmented-control">
+                <input type="radio" id="outbreakYes" name="outbreak" value="มี" checked>
+                <label for="outbreakYes">⚠️ พบปัญหาระบาดในพื้นที่ใกล้เคียง</label>
+                <input type="radio" id="outbreakNo" name="outbreak" value="ไม่มี">
+                <label for="outbreakNo">✅ ยังไม่พบในพื้นที่ใกล้เคียง</label>
+              </div>
+            </div>
+
+            <!-- 7. Livestock Dependency Slider -->
+            <div class="form-group">
+              <div class="form-label">
+                <label for="livestockDep">7. พืชนี้ถูกนำไปใช้เป็นอาหารสัตว์ในพื้นที่มากแค่ไหน (%)</label>
+                <span id="livestockDepVal" class="slider-val">75%</span>
+              </div>
+              <input type="range" id="livestockDep" class="form-range" min="0" max="100" value="75">
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                *เช่น ข้าวโพดเลี้ยงสัตว์ รำข้าว หรือหญ้าอาหารสัตว์
+              </div>
+            </div>
+
+            <!-- 8. Food Price Trend -->
+            <div class="form-group">
+              <label class="form-label" for="priceTrend">8. แนวโน้มราคาอาหารในตลาดท้องถิ่น</label>
+              <select id="priceTrend" class="form-select" required>
+                <option value="ลดลง (Falling)">📉 ลดลง (สินค้าล้นตลาด)</option>
+                <option value="คงที่ (Stable)">➡️ คงที่ (ปกติ)</option>
+                <option value="เพิ่มขึ้นเล็กน้อย (Slightly Increasing)">📈 เริ่มปรับตัวสูงขึ้นเล็กน้อย</option>
+                <option value="พุ่งสูงขึ้นอย่างรวดเร็ว (Rapidly Increasing)" selected>🔥 พุ่งสูงขึ้นอย่างรวดเร็ว</option>
+              </select>
+            </div>
+
+            <!-- 9. Custom Free-Text Observations Input -->
+            <div class="form-group">
+              <label class="form-label" for="additionalNotes">
+                <span>9. ข้อสังเกตเพิ่มเติมในพื้นที่ (พิมพ์ตามจริงได้เลย)</span>
+              </label>
+              <textarea id="additionalNotes" class="form-input" rows="3" style="resize: vertical; font-family: var(--font-body);" placeholder="ตัวอย่าง: พบเชื้อราลุกลามตามทิศทางลมใน 3 ตำบลใกล้เคียง, ประตูน้ำปิดซ่อม 2 สัปดาห์, หรือสัตว์เลี้ยงในพื้นที่เริ่มขาดแคลนอาหาร..."></textarea>
+            </div>
+
+            <!-- Buttons -->
+            <div class="form-actions">
+              <button type="submit" id="btnAnalyze" class="btn-primary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                🚀 วิเคราะห์ความเสี่ยงด้วย AI
+              </button>
+
+              <button type="button" id="btnDemo" class="btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                ✨ โหลดตัวอย่างสถานการณ์ (Demo)
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- RIGHT: Results Container -->
+        <section id="resultsContainer" class="results-container">
+
+          <!-- Initial Placeholder State -->
+          <div id="placeholderSection" class="glass-card results-placeholder">
+            <div class="placeholder-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <h3 style="font-family: var(--font-heading); color: var(--text-primary); font-size: 1.3rem; margin-bottom: 0.5rem;">ยินดีต้อนรับสู่ FoodShield AI</h3>
+            <p style="font-size: 0.95rem; line-height: 1.6; max-width: 420px; color: var(--text-secondary);">
+              กรอกข้อมูลสถานการณ์ในพื้นที่ของคุณทางด้านซ้าย หรือกดปุ่ม <strong style="color: var(--accent-green-bright);">"✨ โหลดตัวอย่างสถานการณ์ (Demo)"</strong> เพื่อให้ AI ช่วยประเมินความเสี่ยงและสร้างแผนปฏิบัติการได้ทันที
+            </p>
+          </div>
+
+          <!-- Loading State -->
+          <div id="loadingSection" class="glass-card loading-card hidden">
+            <div class="spinner-outer"></div>
+            <div class="loading-title">กำลังวิเคราะห์ข้อมูลด้วย Gemini AI...</div>
+            <div id="loadingText" class="loading-subtext">กำลังประเมินความเสียหายและวิเคราะห์บริบทข้อความ...</div>
+          </div>
+
+          <!-- Error State Banner -->
+          <div id="errorBanner" class="error-banner hidden">
+            <div class="error-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+              <div class="error-title">เกิดข้อผิดพลาดในการวิเคราะห์</div>
+              <div id="errorMessage" style="font-size: 0.9rem;">โปรดตรวจสอบสัญญาณอินเทอร์เน็ต แล้วกดลองใหม่อีกครั้ง</div>
+            </div>
+          </div>
+
+          <!-- Output Section (Hidden initially) -->
+          <div id="outputSection" class="results-container hidden">
+
+            <!-- 1. Food Collapse Risk Index Card -->
+            <div class="glass-card risk-index-card">
+              <div class="risk-index-header">
+                <div>
+                  <div class="section-subtitle">📊 คะแนนความเสี่ยงรวม (Food Collapse Risk Score)</div>
+                  <div class="risk-score-display">
+                    <span id="riskScoreNum" class="risk-score-num">0</span>
+                    <span class="risk-score-max">/ 100</span>
+                  </div>
+                </div>
+                <div id="riskBadge" class="risk-badge badge-high">ความเสี่ยงสูง</div>
+              </div>
+
+              <!-- Gauge Meter Bar -->
+              <div class="risk-meter-container">
+                <div class="risk-meter-track">
+                  <div id="riskMeterFill" class="risk-meter-fill fill-high"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. AI Situation Analysis Card -->
+            <div class="glass-card">
+              <div class="card-header">
+                <div class="card-header-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                </div>
+                <h3 class="card-title">📝 สรุปสถานการณ์โดย AI</h3>
+              </div>
+              
+              <p id="aiSummaryText" class="summary-text">กำลังโหลดสรุปข้อมูล...</p>
+
+              <div class="section-subtitle" style="margin-top: 1.25rem;">⚠️ ปัจจัยความเสี่ยงสำคัญในพื้นที่</div>
+              <div id="causesList" class="factors-list">
+                <!-- Causes tags inserted dynamically -->
+              </div>
+            </div>
+
+            <!-- 3. Recommended Action Plan Card -->
+            <div class="glass-card">
+              <div class="card-header">
+                <div class="card-header-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                </div>
+                <div>
+                  <h3 class="card-title">💡 แนะนำแผนปฏิบัติการและวิธีรับมือ (Action Plan)</h3>
+                  <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.15rem;">ข้อแนะนำแบ่งตามกรอบเวลาเพื่อให้ปฏิบัติงานได้จริง</p>
+                </div>
+              </div>
+
+              <div class="actions-grid">
+                <!-- Immediate (0-48h) -->
+                <div class="action-column immediate">
+                  <div class="action-column-header">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    ⚡ ดำเนินการทันที (0-48 ชม.)
+                  </div>
+                  <ul id="immediateActionsList" class="action-list">
+                    <!-- Action items -->
+                  </ul>
+                </div>
+
+                <!-- Next 7 DaysShort-Term -->
+                <div class="action-column short-term">
+                  <div class="action-column-header">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    📅 ระยะสั้น (ภายใน 7 วัน)
+                  </div>
+                  <ul id="shortTermActionsList" class="action-list">
+                    <!-- Action items -->
+                  </ul>
+                </div>
+
+                <!-- Long-Term Prevention -->
+                <div class="action-column long-term">
+                  <div class="action-column-header">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    🛡️ แผนป้องกันระยะยาว
+                  </div>
+                  <ul id="longTermActionsList" class="action-list">
+                    <!-- Action items -->
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Broken World Domino Effect Timeline -->
+            <div class="glass-card">
+              <div class="card-header">
+                <div class="card-header-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <div>
+                  <h3 class="card-title">🔗 คาดการณ์ลำดับผลกระทบที่จะเกิดขึ้นตามมา (Domino Effect)</h3>
+                  <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.15rem;">หากไม่เร่งแก้ไข ปัญหาจะส่งผลกระทบต่อเนื่องเป็นทอดๆ ดังนี้:</p>
+                </div>
+              </div>
+
+              <div class="timeline-container">
+                <div id="dominoTimeline" class="timeline-flow">
+                  <!-- Timeline nodes rendered dynamically -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+      </main>
+    </div>
+
+    <!-- ==================== VIEW 2: ABOUT PAGE ==================== -->
+    <div id="aboutView" class="info-page-view hidden">
+      <div class="info-hero-banner">
+        <div style="display: inline-block; background: rgba(16, 185, 129, 0.15); color: var(--accent-green-bright); padding: 0.4rem 1.2rem; border-radius: 99px; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.8rem;">
+          ℹ️ เกี่ยวกับโครงการ (About Project)
+        </div>
+        <h2 class="info-title">FoodShield AI คืออะไร?</h2>
+        <p class="info-subtitle">
+          ระบบ AI ช่วยเตือนภัยและวิเคราะห์ความเสี่ยงทางการเกษตรแบบรอบด้าน เพื่อป้องกันปัญหาขาดแคลนอาหาร และช่วยให้ชุมชนรับมือภัยธรรมชาติได้ทันท่วงที
+        </p>
+      </div>
+
+      <div class="info-grid cols-2">
+        <div class="info-card">
+          <div class="info-card-icon">
+            🌊
+          </div>
+          <h3 class="info-card-title">1. ทำไมต้องวิเคราะห์แบบ "ผลกระทบลูกคลื่น"?</h3>
+          <p class="info-card-desc">
+            ในชีวิตจริง ปัญหาไม่ได้จบแค่พืชผลเสียหาย แต่ส่งผลกระทบต่อเนื่องเป็นทอดๆ: <br>
+            <strong style="color: var(--accent-green-bright);">พืชผลเสียหาย ➔ อาหารสัตว์ขาดแคลน ➔ ปศุสัตว์ลดลง ➔ ราคาอาหารพุ่งสูง ➔ ระบบนิเวศเสียสมดุล</strong><br>
+            FoodShield AI จึงช่วยมองภาพรวมทั้งระบบเพื่อตัดวงจรปัญหาก่อนจะสายเกินไป
+          </p>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-icon">
+            🤖
+          </div>
+          <h3 class="info-card-title">2. พลังการวิเคราะห์จาก Google Gemini AI</h3>
+          <p class="info-card-desc">
+            นำข้อมูลสภาพอากาศ ปริมาณน้ำ โรคระบาด พฤติกรรมตลาด และข้อสังเกตจากชาวบ้าน มารวมกันเพื่อให้ AI ประมวลออกมาเป็น <strong>"คะแนนความเสี่ยง"</strong> และ <strong>"แนะแนวทางแก้ไขที่ทำได้จริง"</strong> ภายในไม่กี่วินาที
+          </p>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-icon">
+            🎯
+          </div>
+          <h3 class="info-card-title">3. เป้าหมายสำคัญของเรา</h3>
+          <p class="info-card-desc">
+            ปกป้องเกษตรกรและชุมชนจากการขาดแคลนอาหาร ลดความเสียหายทางเศรษฐกิจ และช่วยหน่วยงานท้องถิ่นวางแผนกระจายความช่วยเหลือได้ตรงจุดและทันเวลา
+          </p>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-icon">
+            👥
+          </div>
+          <h3 class="info-card-title">4. พัฒนาโดยทีม "กระเพราหมูกรอบ"</h3>
+          <p class="info-card-desc">
+            โครงการนี้พัฒนาขึ้นโดยนักเรียนและเยาวชนคนรุ่นใหม่ เพื่อเข้าร่วมการแข่งขัน AI สร้างสรรค์นวัตกรรมสังคม แก้ไขปัญหาวิกฤตโลก (Broken World) ด้วยปัญญาประดิษฐ์
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== VIEW 3: AGRI GUIDANCE PAGE ==================== -->
+    <div id="guidanceView" class="info-page-view hidden">
+      <div class="info-hero-banner">
+        <div style="display: inline-block; background: rgba(16, 185, 129, 0.15); color: var(--accent-green-bright); padding: 0.4rem 1.2rem; border-radius: 99px; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.8rem;">
+          📖 คู่มือรับมือวิกฤตการเกษตร (Agricultural Guidance)
+        </div>
+        <h2 class="info-title">แนวทางปฏิบัติมาตรฐานสำหรับเกษตรกร</h2>
+        <p class="info-subtitle">
+          รวมเทคนิคที่ผ่านการรับรองแล้ว ในการบริหารจัดการน้ำ การควบคุมศัตรูพืช และการดูแลปศุสัตว์อย่างยั่งยืน
+        </p>
+      </div>
+
+      <div class="info-grid cols-3">
+        <div class="info-card">
+          <div class="info-card-icon">
+            💧
+          </div>
+          <h3 class="info-card-title">1. ประหยัดน้ำช่วงภัยแล้ง</h3>
+          <p class="info-card-desc">
+            • ใช้น้ำเปียกสลับแห้ง (AWD) ในแปลงนา ประหยัดน้ำได้ถึง 30%<br>
+            • คลุมดินด้วยฟางหรือเศษพืชเพื่อรักษาความชื้น<br>
+            • ขุดสระประจำฟาร์มสำรองน้ำใช้ยามฉุกเฉิน
+          </p>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-icon">
+            🌿
+          </div>
+          <h3 class="info-card-title">2. กำจัดศัตรูพืชแบบชีวภาพ</h3>
+          <p class="info-card-desc">
+            • ใช้เชื้อราบิวเวอเรีย และ BT ป้องกันแมลงศัตรูพืช<br>
+            • ฉีดพ่นเชื้อราไตรโคเดอร์มา ป้องกันโรคราเน่าโคนเน่า<br>
+            • ปลูกพืชตระกูลถั่วสลับเพื่อบำรุงดินและตัดวงจรโรค
+          </p>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-icon">
+            🐄
+          </div>
+          <h3 class="info-card-title">3. ดูแลและสำรองอาหารสัตว์</h3>
+          <p class="info-card-desc">
+            • ทำหญ้าหมัก (Silage) สำรองไว้ชดเชยช่วงพืชผลขาดแคลน<br>
+            • จัดโรงเรือนระบายอากาศดี ลดความตึงเครียดของสัตว์จากความร้อน<br>
+            • เสริมแร่ธาตุและอาหารเสริมเพื่อรักษาภูมิคุ้มกันปศุสัตว์
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== VIEW 4: RESEARCH & DATA PAGE ==================== -->
+    <div id="researchView" class="info-page-view hidden">
+      <div class="info-hero-banner">
+        <div style="display: inline-block; background: rgba(16, 185, 129, 0.15); color: var(--accent-green-bright); padding: 0.4rem 1.2rem; border-radius: 99px; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.8rem;">
+          🌐 แหล่งข้อมูลวิจัย & การต่อยอด (Research & Data Integration)
+        </div>
+        <h2 class="info-title">ยกระดับสู่การใช้งานจริงในอนาคต</h2>
+        <p class="info-subtitle">
+          การต่อยอดโครงสร้าง FoodShield AI ให้เชื่อมโยงกับฐานข้อมูลระดับโลกและภาพถ่ายดาวเทียม
+        </p>
+      </div>
+
+      <div class="info-grid cols-2">
+        <div class="info-card">
+          <div class="info-card-icon">
+            🇺🇳
+          </div>
+          <h3 class="info-card-title">1. เชื่อมฐานข้อมูล UN (FAO & WFP)</h3>
+          <p class="info-card-desc">
+            ดึงข้อมูลดัชนีราคาอาหารระดับโลก (FAO Food Price Index) และแผนที่ความอดอยาก (WFP HungerMap) เพื่อประเมินแนวโน้มราคาสินค้าเกษตรและแจ้งเตือนภัยล่วงหน้าได้แม่นยำยิ่งขึ้น
+          </p>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-icon">
+            🛰️
+          </div>
+          <h3 class="info-card-title">2. ภาพถ่ายดาวเทียมสำรวจอวกาศ</h3>
+          <p class="info-card-desc">
+            นำดัชนีความสมบูรณ์พืชพรรณ (NDVI) จากดาวเทียม Sentinel-2 มาตรวจจับพื้นที่แห้งแล้งหรือใบพืชเปลี่ยนสีโดยอัตโนมัติก่อนที่จะเกิดการระบาดเป็นวงกว้าง
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-title">FoodShield AI — ระบบปัญญาประดิษฐ์สนับสนุนการตัดสินใจเพื่อความมั่นคงทางอาหาร</div>
+      <p class="footer-disclaimer">
+        ต้นแบบนี้จัดทำขึ้นเพื่อการศึกษาและสนับสนุนการตัดสินใจ ผลการประเมินโดย AI ไม่ควรใช้แทนคำแนะนำจากผู้เชี่ยวชาญทางการเกษตรหรือมาตรการจากภาครัฐโดยตรง
+      </p>
+    </footer>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/gemini.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
