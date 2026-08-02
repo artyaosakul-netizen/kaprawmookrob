@@ -7,9 +7,23 @@ let GEMINI_MODEL = "gemini-3.5-flash";
 let GEMINI_API_KEY = "";
 
 /**
- * Automatically fetch and parse .env file at startup
+ * Load configuration from build-time config.js (Vercel) or .env file (local dev)
  */
 async function loadEnvConfig() {
+  // 1. Check for build-time injected config (Vercel deployment)
+  if (window.__FOODSHIELD_CONFIG) {
+    const cfg = window.__FOODSHIELD_CONFIG;
+    if (cfg.GEMINI_API_KEY && cfg.GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY') {
+      GEMINI_API_KEY = cfg.GEMINI_API_KEY;
+    }
+    if (cfg.GEMINI_MODEL) {
+      GEMINI_MODEL = cfg.GEMINI_MODEL;
+    }
+    console.log(`[FoodShield AI] Config loaded from build-time injection (Model: ${GEMINI_MODEL})`);
+    return;
+  }
+
+  // 2. Fallback: try fetching .env file (local development)
   try {
     const response = await fetch('.env');
     if (!response.ok) return;
@@ -40,14 +54,13 @@ async function loadEnvConfig() {
       }
     });
 
-    console.log(`[FoodShield AI] Environment config loaded from .env (Model: ${GEMINI_MODEL})`);
+    console.log(`[FoodShield AI] Config loaded from .env file (Model: ${GEMINI_MODEL})`);
   } catch (err) {
-    // If running from file:// protocol or .env not readable, fallback to defaults/UI
-    console.info("[FoodShield AI] Using runtime API key configuration.");
+    console.info("[FoodShield AI] No .env file found, using defaults.");
   }
 }
 
-// Auto-load .env on module load
+// Auto-load config on module load
 loadEnvConfig();
 
 /**

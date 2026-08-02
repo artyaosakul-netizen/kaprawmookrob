@@ -1,4 +1,4 @@
 {
-  "buildCommand": "printf 'GEMINI_API_KEY=%s\nGEMINI_MODEL=%s\n' \"$GEMINI_API_KEY\" \"$GEMINI_MODEL\" > .env",
+  "buildCommand": "printf 'window.__FOODSHIELD_CONFIG={GEMINI_API_KEY:\"%s\",GEMINI_MODEL:\"%s\"};' \"$GEMINI_API_KEY\" \"$GEMINI_MODEL\" > config.js",
   "outputDirectory": "."
 }

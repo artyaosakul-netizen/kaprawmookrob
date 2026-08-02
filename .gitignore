@@ -1,5 +1,6 @@
 # Security: Do not commit sensitive environment files
 .env
 .env.local
+config.js
 *.log
 .DS_Store
