@@ -1,0 +1,4 @@
+{
+  "buildCommand": "echo \"GEMINI_API_KEY=$GEMINI_API_KEY\nGEMINI_MODEL=$GEMINI_MODEL\" > .env",
+  "outputDirectory": "."
+}
