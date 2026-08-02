@@ -1,4 +1,8 @@
 {
-  "buildCommand": "printf 'window.__FOODSHIELD_CONFIG={GEMINI_API_KEY:\"%s\",GEMINI_MODEL:\"%s\"};' \"$GEMINI_API_KEY\" \"$GEMINI_MODEL\" > config.js",
-  "outputDirectory": "."
+  "framework": null,
+  "functions": {
+    "api/**/*.py": {
+      "maxDuration": 60
+    }
+  }
 }

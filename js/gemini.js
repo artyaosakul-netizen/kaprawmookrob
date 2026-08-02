@@ -1,29 +1,16 @@
 /**
- * FoodShield AI - Gemini API Integration Module (.env Loader Enabled)
+ * FoodShield AI - Gemini API Integration Module
+ * Uses /api/gemini serverless proxy on Vercel, or direct API call for local dev
  */
 
-// Configuration Defaults (overridden by .env if present)
+// Configuration Defaults (overridden by .env if present for local dev)
 let GEMINI_MODEL = "gemini-3.5-flash";
 let GEMINI_API_KEY = "";
 
 /**
- * Load configuration from build-time config.js (Vercel) or .env file (local dev)
+ * Load configuration from .env file (local development only)
  */
 async function loadEnvConfig() {
-  // 1. Check for build-time injected config (Vercel deployment)
-  if (window.__FOODSHIELD_CONFIG) {
-    const cfg = window.__FOODSHIELD_CONFIG;
-    if (cfg.GEMINI_API_KEY && cfg.GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY') {
-      GEMINI_API_KEY = cfg.GEMINI_API_KEY;
-    }
-    if (cfg.GEMINI_MODEL) {
-      GEMINI_MODEL = cfg.GEMINI_MODEL;
-    }
-    console.log(`[FoodShield AI] Config loaded from build-time injection (Model: ${GEMINI_MODEL})`);
-    return;
-  }
-
-  // 2. Fallback: try fetching .env file (local development)
   try {
     const response = await fetch('.env');
     if (!response.ok) return;
@@ -41,32 +28,23 @@ async function loadEnvConfig() {
       const key = trimmed.substring(0, equalIdx).trim();
       let value = trimmed.substring(equalIdx + 1).trim();
 
-      // Strip quotes if present
       if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
         value = value.substring(1, value.length - 1);
       }
 
-      if (key === 'GEMINI_MODEL' && value) {
-        GEMINI_MODEL = value;
-      }
-      if (key === 'GEMINI_API_KEY' && value && value !== 'YOUR_GEMINI_API_KEY') {
-        GEMINI_API_KEY = value;
-      }
+      if (key === 'GEMINI_MODEL' && value) GEMINI_MODEL = value;
+      if (key === 'GEMINI_API_KEY' && value && value !== 'YOUR_GEMINI_API_KEY') GEMINI_API_KEY = value;
     });
 
-    console.log(`[FoodShield AI] Config loaded from .env file (Model: ${GEMINI_MODEL})`);
+    console.log(`[FoodShield AI] Config loaded from .env (Model: ${GEMINI_MODEL})`);
   } catch (err) {
-    console.info("[FoodShield AI] No .env file found, using defaults.");
+    console.info("[FoodShield AI] No .env file found, will use server proxy.");
   }
 }
 
 // Auto-load config on module load
 loadEnvConfig();
 
-/**
- * Update active API key at runtime
- * @param {string} newKey 
- */
 function setApiKey(newKey) {
   if (newKey && newKey.trim()) {
     GEMINI_API_KEY = newKey.trim();
@@ -75,18 +53,12 @@ function setApiKey(newKey) {
   return false;
 }
 
-/**
- * Get current API key
- * @returns {string}
- */
 function getApiKey() {
   return GEMINI_API_KEY;
 }
 
 /**
  * Robust JSON extractor and cleaner
- * @param {string} rawText 
- * @returns {Object}
  */
 function parseGeminiJson(rawText) {
   if (!rawText) {
@@ -94,14 +66,11 @@ function parseGeminiJson(rawText) {
   }
 
   let text = rawText.trim();
-
-  // Strip markdown code fences if present
   text = text.replace(/^```json\s*/i, '');
   text = text.replace(/^```\s*/i, '');
   text = text.replace(/\s*```$/i, '');
   text = text.trim();
 
-  // Extract JSON substring starting from first '{' to last '}'
   const firstBrace = text.indexOf('{');
   const lastBrace = text.lastIndexOf('}');
 
@@ -112,17 +81,13 @@ function parseGeminiJson(rawText) {
   try {
     return JSON.parse(text);
   } catch (parseError) {
-    console.warn("First JSON.parse attempt failed, attempting fallback cleanup...", parseError);
-
-    // Clean common JSON syntax errors
     let cleaned = text
-      .replace(/,\s*([\]}])/g, '$1') // Remove trailing commas
-      .replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control chars
+      .replace(/,\s*([\]}])/g, '$1')
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
 
     try {
       return JSON.parse(cleaned);
     } catch (secondErr) {
-      // Attempt auto-closing truncated JSON
       let repaired = cleaned;
       const openBrackets = (repaired.match(/\[/g) || []).length;
       const closeBrackets = (repaired.match(/\]/g) || []).length;
@@ -143,18 +108,9 @@ function parseGeminiJson(rawText) {
 }
 
 /**
- * Analyze agricultural food security risk using Google Gemini API
- * @param {Object} formData 
- * @returns {Promise<Object>} Formatted JSON analysis from Gemini in THAI
+ * Build the Gemini request body from form data
  */
-async function analyzeFoodSecurityRisk(formData) {
-  const currentKey = getApiKey();
-  
-  if (!currentKey || currentKey === "YOUR_GEMINI_API_KEY" || currentKey.trim() === "") {
-    throw new Error("ไม่พบคีย์ Gemini API โปรดระบุ GEMINI_API_KEY ในไฟล์ .env หรือใส่คีย์ในช่องตั้งค่าคีย์ด้านบน");
-  }
-
-  // Construct clear prompt for Gemini
+function buildGeminiRequestBody(formData) {
   const promptText = `
 คุณคือผู้เชี่ยวชาญระดับสูงด้านระบบสนับสนุนการตัดสินใจเพื่อความมั่นคงทางอาหาร พลวัตการเกษตร และวิทยาศาสตร์ระบบนิเวศ (Agricultural Food-Security Decision-Support System)
 
@@ -208,64 +164,102 @@ async function analyzeFoodSecurityRisk(formData) {
 }
 `;
 
+  return {
+    contents: [{ parts: [{ text: promptText }] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.2,
+      maxOutputTokens: 8192
+    }
+  };
+}
+
+/**
+ * Analyze agricultural food security risk using Gemini API
+ * Uses /api/gemini serverless proxy on Vercel, or direct API call for local dev
+ */
+async function analyzeFoodSecurityRisk(formData) {
+  const requestBody = buildGeminiRequestBody(formData);
+  const localKey = getApiKey();
+
+  // Strategy 1: Try server proxy (/api/gemini) — works on Vercel deployment
+  try {
+    const proxyResponse = await fetch("/api/gemini", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (proxyResponse.ok) {
+      const data = await proxyResponse.json();
+      const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (candidateText) {
+        return parseGeminiJson(candidateText);
+      }
+    }
+
+    // Check proxy error details
+    const proxyError = await proxyResponse.json().catch(() => ({}));
+    const proxyMsg = proxyError.error?.message || proxyError.error || "";
+
+    // If proxy exists but key not set, throw clear error
+    if (proxyResponse.status === 500 && proxyMsg.includes("not configured")) {
+      throw new Error("เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า GEMINI_API_KEY ใน Vercel Environment Variables");
+    }
+
+    // For non-404 errors, report them
+    if (proxyResponse.status !== 404) {
+      throw new Error(`เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ${proxyMsg || proxyResponse.statusText}`);
+    }
+  } catch (err) {
+    // If it's a real error (not just "proxy doesn't exist"), re-throw unless we have a local key
+    if (err.message && !err.message.includes("Failed to fetch") && !err.message.includes("NetworkError")) {
+      if (!localKey) throw err;
+    }
+    console.info("[FoodShield AI] Server proxy unavailable, trying direct API call...");
+  }
+
+  // Strategy 2: Direct API call (local development with .env key)
+  if (!localKey || localKey === "YOUR_GEMINI_API_KEY") {
+    throw new Error("ไม่พบคีย์ Gemini API — โปรดตั้งค่า GEMINI_API_KEY ใน Vercel Environment Variables หรือในไฟล์ .env สำหรับการพัฒนา");
+  }
+
   const modelsToTry = Array.from(new Set([GEMINI_MODEL, "gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"])).filter(Boolean);
   let lastError = null;
 
   for (const model of modelsToTry) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${localKey}`;
 
     try {
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: promptText
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.2,
-            maxOutputTokens: 8192
-          }
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const msg = errorData.error?.message || `HTTP ${response.status} ${response.statusText}`;
         lastError = new Error(`เกิดข้อผิดพลาดจาก Gemini API (${model}): ${msg}`);
-        // If 404 (model not found), try next model fallback
         if (response.status === 404) {
-          console.warn(`Model ${model} returned 404, trying next fallback model...`);
+          console.warn(`Model ${model} returned 404, trying next...`);
           continue;
         }
         throw lastError;
       }
 
       const data = await response.json();
-      
-      // Extract candidate text
       const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
+
       if (!candidateText) {
         throw new Error("ไม่ได้รับข้อมูลการตอบกลับจาก Gemini API");
       }
 
-      // Robust JSON extraction and repair
       return parseGeminiJson(candidateText);
 
     } catch (err) {
       lastError = err;
       if (modelsToTry.indexOf(model) === modelsToTry.length - 1 || !err.message.includes("404")) {
-        console.error("Gemini API Request Error:", err);
         throw err;
       }
     }

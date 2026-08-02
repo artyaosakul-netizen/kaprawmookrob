@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="เว็บทดลองเรียนรู้การเชื่อม Gemini API กับ HTML, JavaScript และ Python">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+  <title>LLM API Playground — Gemini</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/script.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="กลับไปด้านบน">
+      <span class="brand-mark">LLM</span>
+      <span>API Playground</span>
+    </a>
+    <nav aria-label="เมนูหลัก">
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero page-width">
+      <div class="hero-div">
+        <h1>คุยกับ LLM บนเว็บของเราเองยังไงผ่าน
+          <br>
+          <span span>Gemini API</span>
+        </h1>
+        <div class="hero-actions">
+          <a class="button primary" href="#playground">เริ่มทดลอง</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="playground-section" id="playground">
+      <div class="page-width">
+        <div class="playground-heading">
+          <div>
+            <h2>Gemini API Playground</h2>
+          </div>
+          <label class="learn-switch">
+            <input id="learning-mode" type="checkbox">
+            <span class="switch-track" aria-hidden="true"><span></span></span>
+            <span><strong>Learning Mode</strong><small>กดเพื่อเปิดดู Request / Response</small></span>
+          </label>
+        </div>
+
+        <div id="provider-status" class="provider-status" role="status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div>
+            <strong>กำลังตรวจการตั้งค่า Gemini...</strong>
+            <small id="active-model">ยังไม่ทราบ Model</small>
+          </div>
+        </div>
+
+        <div class="playground-grid">
+          <aside class="prompt-panel">
+            <div class="panel-title">
+              <span>1</span>
+              <div>
+                <h3>System Prompt</h3>
+                <p>*กำหนดบอกบทบาทและแนวทางการตอบให้ LLM*</p>
+              </div>
+            </div>
+            <textarea id="system-prompt" rows="8" maxlength="2000">คุณคือผู้ช่วยคิดโครงงาน AI สำหรับนักเรียนมัธยมปลาย ตอบเป็นภาษาไทยที่เข้าใจง่าย</textarea>
+            <div class="field-meta">
+              <span>สูงสุด 2,000 ตัวอักษร</span>
+              <span><b id="system-count">0</b>/2,000</span>
+            </div>
+            <div class="button-row">
+              <button id="sample-system" class="button soft" type="button">ใช้ Prompt ตัวอย่าง</button>
+              <button id="reset-system" class="button ghost" type="button">รีเซ็ต</button>
+              <button id="copy-system" class="button ghost" type="button">คัดลอก</button>
+            </div>
+          </aside>
+
+          <section class="chat-panel" aria-labelledby="chat-title">
+            <div class="panel-title">
+              <span>2</span>
+              <div>
+                <h3 id="chat-title">User Prompt</h3>
+              </div>
+            </div>
+
+            <div class="privacy-warning">
+              <b>ห้ามส่งข้อมูลส่วนบุคคล</b>
+              ไม่ควรส่งชื่อจริง รหัสผ่าน เลขบัตร ที่อยู่ หรือข้อมูลส่วนบุคคลให้ AI เด็ดขาด*
+            </div>
+
+            <div class="examples">
+              <span>Prompt ตัวอย่าง</span>
+              <button type="button" data-prompt="ช่วยคิดโครงงาน AI ที่ช่วยแก้ปัญหาในโรงเรียน">ช่วยคิดโครงงานแก้ปัญหาในโรงเรียน</button>
+              <button type="button" data-prompt="ช่วยออกแบบเว็บไซต์ที่ใช้ AI จำแนกขยะ">ช่วยทำเว็บ AI จำแนกขยะ</button>
+              <button type="button" data-prompt="อธิบาย API ให้เด็กมัธยมเข้าใจ">API คืออะไร</button>
+            </div>
+
+            <label for="user-message">ข้อความของเรา</label>
+            <textarea id="user-message" rows="5" maxlength="4000" placeholder="เช่น ช่วยคิดโครงงาน AI ที่ช่วยลดขยะในโรงเรียน"></textarea>
+            <div class="field-meta">
+              <span><b id="message-count">0</b>/4,000</span>
+            </div>
+
+            <div class="send-row">
+              <button id="send-button" class="button send" type="button" disabled>
+                <span class="send-label">ส่งให้ Gemini</span>
+                <span class="loading-label"><i aria-hidden="true"></i> กำลังรอคำตอบ...</span>
+              </button>
+              <small id="send-hint">กำลังตรวจ Backend</small>
+            </div>
+
+            <section class="answer-card" aria-live="polite" aria-busy="false">
+              <header>
+                <h4><span aria-hidden="true"></span> คำตอบจาก Gemini</h4>
+                <div>
+                  <button id="copy-answer" type="button" disabled>คัดลอก</button>
+                  <button id="clear-answer" type="button">ล้าง</button>
+                </div>
+              </header>
+              <div id="answer-output" class="answer-output">
+                <p class="placeholder">คำตอบจะปรากฏตรงนี้หลังจากกด “ส่งให้ Gemini”</p>
+              </div>
+            </section>
+          </section>
+        </div>
+
+        <section id="learning-panel" class="learning-panel" hidden>
+          <div class="learning-heading">
+            <div>
+              <p class="eyebrow">เปิดกล่องดำ</p>
+              <h3>ข้อความถูกส่งและรับอย่างไร?</h3>
+            </div>
+            <p>ข้อมูลลับถูกตัดออกก่อนแสดงเสมอ</p>
+          </div>
+
+          <dl class="learning-summary">
+            <div><dt>Provider</dt><dd>Google Gemini</dd></div>
+            <div><dt>Model</dt><dd id="debug-model">—</dd></div>
+            <div><dt>URL ที่ Browser เรียก</dt><dd><code>/api/chat</code></dd></div>
+            <div><dt>ระยะเวลา</dt><dd id="debug-duration">—</dd></div>
+            <div><dt>Input Tokens</dt><dd id="debug-input-tokens">—</dd></div>
+            <div><dt>Output Tokens</dt><dd id="debug-output-tokens">—</dd></div>
+            <div><dt>Total Tokens</dt><dd id="debug-total-tokens">—</dd></div>
+            <div><dt>Diagnostic</dt><dd id="debug-diagnostic">—</dd></div>
+          </dl>
+
+          <div class="prompt-trace">
+            <article><h4>System Prompt</h4><pre id="debug-system">ยังไม่ได้ส่ง</pre></article>
+            <article><h4>User Prompt</h4><pre id="debug-user">ยังไม่ได้ส่ง</pre></article>
+          </div>
+
+          <div class="json-trace">
+            <article>
+              <span>1 · Browser → Python</span>
+              <h4>Request JSON ที่ JavaScript ส่ง</h4>
+              <pre id="debug-request">ยังไม่มี Request</pre>
+            </article>
+            <article>
+              <span>2 · Python → Gemini</span>
+              <h4>Request ที่ Python เตรียมให้ Provider</h4>
+              <pre id="debug-provider-request">ยังไม่มี Provider Request</pre>
+            </article>
+            <article>
+              <span>3 · Gemini → Python</span>
+              <h4>Response ที่ Provider ส่งกลับ</h4>
+              <pre id="debug-provider-response">ยังไม่มี Provider Response</pre>
+            </article>
+            <article>
+              <span>4 · Python → Browser</span>
+              <h4>Response JSON หลักจาก Backend</h4>
+              <pre id="debug-response">ยังไม่มี Response</pre>
+            </article>
+          </div>
+
+          <div class="secret-note">
+            <strong>สิ่งที่ปิดไว้ ไม่ให้ดูวว!:</strong>
+            API Key, Header ที่ใช้ยืนยันตัวตน, Raw Error และ Stack Trace
+          </div>
+        </section>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
