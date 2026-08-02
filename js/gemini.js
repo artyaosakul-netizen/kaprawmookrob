@@ -3,7 +3,7 @@
  */
 
 // Configuration Defaults (overridden by .env if present)
-let GEMINI_MODEL = "gemini-2.5-flash";
+let GEMINI_MODEL = "gemini-3.5-flash";
 let GEMINI_API_KEY = "";
 
 /**
@@ -195,7 +195,7 @@ async function analyzeFoodSecurityRisk(formData) {
 }
 `;
 
-  const modelsToTry = Array.from(new Set([GEMINI_MODEL, "gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"])).filter(Boolean);
+  const modelsToTry = Array.from(new Set([GEMINI_MODEL, "gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"])).filter(Boolean);
   let lastError = null;
 
   for (const model of modelsToTry) {
