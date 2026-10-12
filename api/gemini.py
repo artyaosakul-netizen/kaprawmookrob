@@ -14,7 +14,7 @@ class handler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             request_data = json.loads(body)
 
-            api_key = os.environ.get("GEMINI_API_KEY", "")
+            api_key = "AQ.Ab8RN6Jqok5OOC1a6bCnsAUdQPXF-_1b0-neD348QWssagduJA"
             model = "gemini-1.5-flash"
 
             if not api_key:
