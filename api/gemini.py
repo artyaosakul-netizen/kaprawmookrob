@@ -10,8 +10,8 @@ import urllib.error
 from http.server import BaseHTTPRequestHandler
 
 
-PRIMARY_MODEL = "gemini-3.8-flash"
-FALLBACK_MODEL = "gemini-3.6-flash"
+PRIMARY_MODEL = "gemini-3.6-flash"
+FALLBACK_MODEL = "gemini-3.8-flash"
 
 # Errors that may be temporary
 RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504}
