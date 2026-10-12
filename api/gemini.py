@@ -15,7 +15,7 @@ class handler(BaseHTTPRequestHandler):
             request_data = json.loads(body)
 
             api_key = os.environ.get("GEMINI_API_KEY", "")
-            model = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+            model = "gemini-1.5-flash"
 
             if not api_key:
                 self._send_json(500, {"error": "GEMINI_API_KEY not configured on server"})
