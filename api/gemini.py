@@ -1,4 +1,5 @@
-"""Vercel Serverless Function — proxies Gemini API calls with server-side API key"""
+
+"""Vercel Serverless Function — Gemini API proxy"""
 
 import json
 import os
@@ -8,57 +9,119 @@ from http.server import BaseHTTPRequestHandler
 
 
 class handler(BaseHTTPRequestHandler):
+
     def do_POST(self):
         try:
-            content_length = int(self.headers.get("Content-Length", 0))
+            content_length = int(
+                self.headers.get("Content-Length", "0")
+            )
+
+            if content_length <= 0:
+                self._send_json(400, {
+                    "error": {"message": "Request body is empty"}
+                })
+                return
+
             body = self.rfile.read(content_length)
             request_data = json.loads(body)
 
-            api_key = "AQ.Ab8RN6KqqPYxZqUKcKClSk7XNA-EvT6yJ4koHjwUuTl3N7Z3iA"
-            model = "gemini-flash-latest"
+            # Read the secret key from Vercel settings
+            api_key = os.environ.get("GEMINI_API_KEY")
 
             if not api_key:
-                self._send_json(500, {"error": "GEMINI_API_KEY not configured on server"})
+                self._send_json(500, {
+                    "error": {
+                        "message":
+                        "GEMINI_API_KEY not configured on server"
+                    }
+                })
                 return
 
-            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            # Keep the existing model for now
+            model = "gemini-flash-latest"
+
+            gemini_url = (
+                "https://generativelanguage.googleapis.com/"
+                f"v1beta/models/{model}:generateContent"
+            )
 
             req = urllib.request.Request(
                 gemini_url,
                 data=json.dumps(request_data).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": api_key,
+                },
                 method="POST",
             )
 
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                result = json.loads(resp.read().decode("utf-8"))
+            with urllib.request.urlopen(
+                req, timeout=60
+            ) as response:
+                result = json.loads(
+                    response.read().decode("utf-8")
+                )
                 self._send_json(200, result)
 
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode("utf-8", errors="replace")
-            try:
-                error_json = json.loads(error_body)
-            except json.JSONDecodeError:
-                error_json = {"error": error_body}
-            self._send_json(e.code, error_json)
+        except json.JSONDecodeError:
+            self._send_json(400, {
+                "error": {"message": "Invalid JSON request"}
+            })
 
-        except Exception as e:
-            self._send_json(500, {"error": str(e)})
+        except urllib.error.HTTPError as e:
+            try:
+                error_data = json.loads(
+                    e.read().decode("utf-8", errors="replace")
+                )
+            except json.JSONDecodeError:
+                error_data = {
+                    "error": {
+                        "message": "Gemini API request failed"
+                    }
+                }
+
+            self._send_json(e.code, error_data)
+
+        except Exception:
+            self._send_json(500, {
+                "error": {"message": "Internal server error"}
+            })
 
     def _send_json(self, status, data):
-        body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        body = json.dumps(
+            data, ensure_ascii=False
+        ).encode("utf-8")
+
         self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header(
+            "Content-Type", "application/json; charset=utf-8"
+        )
+        self.send_header(
+            "Access-Control-Allow-Origin", "*"
+        )
+        self.send_header(
+            "Access-Control-Allow-Methods", "POST, OPTIONS"
+        )
+        self.send_header(
+            "Access-Control-Allow-Headers", "Content-Type"
+        )
+        self.send_header(
+            "Content-Length", str(len(body))
+        )
         self.end_headers()
         self.wfile.write(body)
 
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header(
+            "Access-Control-Allow-Origin", "*"
+        )
+        self.send_header(
+            "Access-Control-Allow-Methods", "POST, OPTIONS"
+        )
+        self.send_header(
+            "Access-Control-Allow-Headers", "Content-Type"
+        )
         self.end_headers()
 
     def log_message(self, fmt, *args):
