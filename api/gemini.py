@@ -14,15 +14,15 @@ class handler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             request_data = json.loads(body)
 
-            # ใส่คีย์ตัวใหม่จาก Gmail ส่วนตัว
-            api_key = "AQ.Ab8RN6Kafmz2BAw8O5fldLD6jxtHMUDBpfDOSsKanRDtqb2NIA"
+            # คีย์จริงที่ถูกต้องตรงตาม cURL (แก้ตัวอักษรท้ายเป็น lA แล้ว)
+            api_key = "AQ.Ab8RN6Kafmz2BAw8O5fldLD6jxtHMUDBpfDOssKanRDtqb2NlA"
             model = "gemini-1.5-flash"
 
             if not api_key:
                 self._send_json(500, {"error": "GEMINI_API_KEY not configured on server"})
                 return
 
-            # เรียก API โดยส่งคีย์ผ่าน Header แทน
+            # URL และ Header ตรงตามมาตรฐาน Google cURL
             gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
             req = urllib.request.Request(
@@ -30,7 +30,7 @@ class handler(BaseHTTPRequestHandler):
                 data=json.dumps(request_data).encode("utf-8"),
                 headers={
                     "Content-Type": "application/json",
-                    "x-goog-api-key": api_key,
+                    "X-goog-api-key": api_key,
                 },
                 method="POST",
             )
@@ -63,7 +63,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, x-goog-api-key")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-goog-api-key")
         self.end_headers()
 
     def log_message(self, fmt, *args):
