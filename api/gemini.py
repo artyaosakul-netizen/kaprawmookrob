@@ -2,17 +2,38 @@
 
 import json
 import os
+import random
+import time
 import urllib.request
 import urllib.error
 from http.server import BaseHTTPRequestHandler
 
 
+# ============================================================
+# Gemini Models
+# ============================================================
+
 PRIMARY_MODEL = "gemini-3.8-flash"
 FALLBACK_MODEL = "gemini-3.6-flash"
 
-# Retry เฉพาะ error ที่อาจเกิดชั่วคราว
-RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504}
 
+# ============================================================
+# Temporary errors that are safe to retry
+# ============================================================
+
+RETRYABLE_STATUS = {
+    408,
+    429,
+    500,
+    502,
+    503,
+    504,
+}
+
+
+# ============================================================
+# Call Gemini API
+# ============================================================
 
 def call_gemini(model, request_data, api_key):
     """Call Gemini API and return (status_code, response_data)."""
@@ -32,22 +53,31 @@ def call_gemini(model, request_data, api_key):
         method="POST",
     )
 
-    # สำคัญ: ลดจาก 25 วินาที
-    # เพื่อไม่ให้ Vercel function ค้างจนชน 60 วินาที
-    with urllib.request.urlopen(request, timeout=10) as response:
-        raw = response.read().decode("utf-8")
-        data = json.loads(raw)
+    # Important:
+    # Keep this short so Vercel does not hit its ~60 second limit.
+    with urllib.request.urlopen(request, timeout=15) as response:
+
+        data = json.loads(
+            response.read().decode("utf-8")
+        )
 
         return response.status, data
 
 
+# ============================================================
+# Retry Gemini
+# ============================================================
+
 def call_with_retry(model, request_data, api_key):
     """
-    เรียก Gemini สูงสุด 2 ครั้ง
-    เพื่อไม่ให้ function ใช้เวลานานเกินไป
+    Try Gemini a maximum of 2 times.
+
+    This prevents the Vercel function from running
+    for too long and reaching the serverless timeout.
     """
 
     last_status = 503
+
     last_data = {
         "error": {
             "message": "Gemini request failed"
@@ -57,28 +87,21 @@ def call_with_retry(model, request_data, api_key):
     for attempt in range(2):
 
         try:
+
             status, data = call_gemini(
                 model,
                 request_data,
                 api_key
             )
 
-            # สำเร็จ
-            if status == 200:
-                return status, data
-
-            # Error ที่ไม่ควร retry
-            if status not in RETRYABLE_STATUS:
-                return status, data
-
-            last_status = status
-            last_data = data
+            return status, data
 
         except urllib.error.HTTPError as error:
 
             last_status = error.code
 
             try:
+
                 raw = error.read().decode(
                     "utf-8",
                     errors="replace"
@@ -87,54 +110,61 @@ def call_with_retry(model, request_data, api_key):
                 last_data = json.loads(raw)
 
             except Exception:
+
                 last_data = {
                     "error": {
-                        "message": (
-                            f"Gemini HTTP error {error.code}"
-                        )
+                        "message": str(error)
                     }
                 }
 
-            # เช่น 400, 401, 403 ไม่ต้อง retry
+            # Do not retry permanent errors
             if error.code not in RETRYABLE_STATUS:
                 return last_status, last_data
 
-        except urllib.error.URLError as error:
+        except (
+            TimeoutError,
+            OSError,
+            urllib.error.URLError
+        ) as error:
 
             last_status = 503
 
             last_data = {
                 "error": {
                     "message": (
-                        "Cannot connect to Gemini API",
-                        "detail": str(error.reason)[:300]
+                        "Gemini connection/timeout error: "
+                        + str(error)[:300]
                     )
                 }
             }
 
-        except TimeoutError:
+        except Exception as error:
 
-            last_status = 504
-
-            last_data = {
-                "error": {
-                    "message": "Gemini API request timed out"
-                }
-            }
-
-        except OSError as error:
-
-            last_status = 503
+            last_status = 500
 
             last_data = {
                 "error": {
-                    "message": "Network error",
-                    "detail": str(error)[:300]
+                    "message": (
+                        "Unexpected Gemini error: "
+                        + str(error)[:300]
+                    )
                 }
             }
+
+        # Retry only once
+        if attempt == 0:
+
+            # Small exponential backoff + jitter
+            time.sleep(
+                1 + random.uniform(0, 0.5)
+            )
 
     return last_status, last_data
 
+
+# ============================================================
+# Vercel Handler
+# ============================================================
 
 class handler(BaseHTTPRequestHandler):
 
@@ -142,9 +172,9 @@ class handler(BaseHTTPRequestHandler):
 
         try:
 
-            # -----------------------------
-            # อ่าน request
-            # -----------------------------
+            # ------------------------------------------------
+            # Read request body
+            # ------------------------------------------------
 
             content_length = int(
                 self.headers.get(
@@ -153,51 +183,32 @@ class handler(BaseHTTPRequestHandler):
                 )
             )
 
-            if content_length <= 0:
-                self._send_json(
-                    400,
-                    {
-                        "error": {
-                            "message":
-                            "Request body is empty"
-                        }
-                    }
-                )
-                return
-
-            if content_length > 10_000_000:
-                self._send_json(
-                    400,
-                    {
-                        "error": {
-                            "message":
-                            "Request body is too large"
-                        }
-                    }
-                )
-                return
-
-            body = self.rfile.read(content_length)
-
-            try:
-                request_data = json.loads(body)
-
-            except json.JSONDecodeError:
+            if (
+                content_length <= 0
+                or content_length > 10_000_000
+            ):
 
                 self._send_json(
                     400,
                     {
                         "error": {
                             "message":
-                            "Invalid JSON request"
+                            "Invalid request body size"
                         }
                     }
                 )
+
                 return
 
-            # -----------------------------
-            # API KEY
-            # -----------------------------
+            body = self.rfile.read(
+                content_length
+            )
+
+            request_data = json.loads(body)
+
+            # ------------------------------------------------
+            # Get API Key
+            # ------------------------------------------------
 
             api_key = os.environ.get(
                 "GEMINI_API_KEY"
@@ -210,87 +221,144 @@ class handler(BaseHTTPRequestHandler):
                     {
                         "error": {
                             "message":
-                            "GEMINI_API_KEY is not configured"
+                            "GEMINI_API_KEY not configured on server"
                         }
                     }
                 )
+
                 return
 
-            # -----------------------------
-            # Primary model
-            # -----------------------------
+            # ------------------------------------------------
+            # Try PRIMARY model
+            # ------------------------------------------------
 
-            status, result = call_with_retry(
-                PRIMARY_MODEL,
-                request_data,
-                api_key
-            )
-
-            if status == 200:
-
-                self._send_json(
-                    200,
-                    result
-                )
-                return
-
-            # -----------------------------
-            # Fallback model
-            # -----------------------------
-
-            fallback_status, fallback_result = (
+            primary_status, primary_result = (
                 call_with_retry(
-                    FALLBACK_MODEL,
+                    PRIMARY_MODEL,
                     request_data,
                     api_key
                 )
             )
 
-            if fallback_status == 200:
+            # Success
+            if primary_status == 200:
 
                 self._send_json(
                     200,
-                    fallback_result
+                    primary_result
                 )
+
                 return
 
-            # -----------------------------
-            # ทั้งสองตัวไม่สำเร็จ
-            # -----------------------------
+            # ------------------------------------------------
+            # Try FALLBACK only when appropriate
+            # ------------------------------------------------
 
-            self._send_json(
-                503,
-                {
-                    "error": {
-                        "message":
-                        "Both Gemini models failed",
+            if (
+                primary_status in RETRYABLE_STATUS
+                or primary_status == 404
+            ):
 
-                        "primary": {
-                            "model":
+                fallback_status, fallback_result = (
+                    call_with_retry(
+                        FALLBACK_MODEL,
+                        request_data,
+                        api_key
+                    )
+                )
+
+                # Fallback succeeded
+                if fallback_status == 200:
+
+                    self._send_json(
+                        200,
+                        fallback_result
+                    )
+
+                    return
+
+                # Both failed
+                self._send_json(
+                    fallback_status,
+                    {
+                        "error": {
+                            "message":
+                            "Both Gemini models failed",
+
+                            "primary_model":
                             PRIMARY_MODEL,
-                            "status":
-                            status,
-                            "error":
-                            result.get(
+
+                            "primary_status":
+                            primary_status,
+
+                            "primary_error":
+                            primary_result.get(
                                 "error",
                                 {}
-                            )
-                        },
+                            ),
 
-                        "fallback": {
-                            "model":
+                            "fallback_model":
                             FALLBACK_MODEL,
-                            "status":
+
+                            "fallback_status":
                             fallback_status,
-                            "error":
+
+                            "fallback_error":
                             fallback_result.get(
                                 "error",
                                 {}
-                            )
+                            ),
                         }
+                    }
+                )
+
+                return
+
+            # ------------------------------------------------
+            # Permanent error from PRIMARY
+            # ------------------------------------------------
+
+            self._send_json(
+                primary_status,
+                {
+                    "error": {
+                        "message":
+                        "Gemini API request failed",
+
+                        "model":
+                        PRIMARY_MODEL,
+
+                        "status":
+                        primary_status,
+
+                        "details":
+                        primary_result.get(
+                            "error",
+                            {}
+                        ),
                     }
                 }
             )
+
+        # ----------------------------------------------------
+        # Invalid JSON
+        # ----------------------------------------------------
+
+        except json.JSONDecodeError:
+
+            self._send_json(
+                400,
+                {
+                    "error": {
+                        "message":
+                        "Invalid JSON request"
+                    }
+                }
+            )
+
+        # ----------------------------------------------------
+        # Unexpected server error
+        # ----------------------------------------------------
 
         except Exception as error:
 
@@ -302,31 +370,14 @@ class handler(BaseHTTPRequestHandler):
                         "Internal server error",
 
                         "detail":
-                        str(error)[:500]
+                        str(error)[:300]
                     }
                 }
             )
 
-    def do_OPTIONS(self):
-
-        self.send_response(200)
-
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            "*"
-        )
-
-        self.send_header(
-            "Access-Control-Allow-Methods",
-            "POST, OPTIONS"
-        )
-
-        self.send_header(
-            "Access-Control-Allow-Headers",
-            "Content-Type"
-        )
-
-        self.end_headers()
+    # ========================================================
+    # Send JSON response
+    # ========================================================
 
     def _send_json(self, status, data):
 
@@ -365,6 +416,35 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
         self.wfile.write(body)
+
+    # ========================================================
+    # CORS preflight
+    # ========================================================
+
+    def do_OPTIONS(self):
+
+        self.send_response(200)
+
+        self.send_header(
+            "Access-Control-Allow-Origin",
+            "*"
+        )
+
+        self.send_header(
+            "Access-Control-Allow-Methods",
+            "POST, OPTIONS"
+        )
+
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "Content-Type"
+        )
+
+        self.end_headers()
+
+    # ========================================================
+    # Disable default logging
+    # ========================================================
 
     def log_message(self, fmt, *args):
         return
