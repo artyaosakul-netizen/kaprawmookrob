@@ -14,25 +14,19 @@ class handler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             request_data = json.loads(body)
 
-            # คีย์จริงจาก cURL (แก้ลงท้ายด้วย NlA แอลเล็ก)
-            api_key = "AQ.Ab8RN6Kafmz2BAw8O5fldLD6jxtHMUDBpfDOssKanRDtqb2NlA"
-            # ใช้โมเดล gemini-flash-latest ตามคำสั่ง cURL ตรงๆ
+            api_key = "AQ.Ab8RN6KqqPYxZqUKcKClSk7XNA-EvT6yJ4koHjwUuTl3N7Z3iA"
             model = "gemini-flash-latest"
 
             if not api_key:
                 self._send_json(500, {"error": "GEMINI_API_KEY not configured on server"})
                 return
 
-            # เรียก Endpoint ตาม cURL ของ Google
-            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
 
             req = urllib.request.Request(
                 gemini_url,
                 data=json.dumps(request_data).encode("utf-8"),
-                headers={
-                    "Content-Type": "application/json",
-                    "X-goog-api-key": api_key,
-                },
+                headers={"Content-Type": "application/json"},
                 method="POST",
             )
 
@@ -64,7 +58,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-goog-api-key")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
     def log_message(self, fmt, *args):
