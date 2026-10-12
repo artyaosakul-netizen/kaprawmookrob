@@ -14,15 +14,16 @@ class handler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             request_data = json.loads(body)
 
-            # คีย์จริงที่ถูกต้องตรงตาม cURL (แก้ตัวอักษรท้ายเป็น lA แล้ว)
+            # คีย์จริงจาก cURL (แก้ลงท้ายด้วย NlA แอลเล็ก)
             api_key = "AQ.Ab8RN6Kafmz2BAw8O5fldLD6jxtHMUDBpfDOssKanRDtqb2NlA"
-            model = "gemini-1.5-flash"
+            # ใช้โมเดล gemini-flash-latest ตามคำสั่ง cURL ตรงๆ
+            model = "gemini-flash-latest"
 
             if not api_key:
                 self._send_json(500, {"error": "GEMINI_API_KEY not configured on server"})
                 return
 
-            # URL และ Header ตรงตามมาตรฐาน Google cURL
+            # เรียก Endpoint ตาม cURL ของ Google
             gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
             req = urllib.request.Request(
