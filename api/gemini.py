@@ -18,14 +18,16 @@ from http.server import BaseHTTPRequestHandler
 
 
 PRIMARY_MODEL = "gemini-3.8-flash"
+# Try a lightweight model first as an alternate capacity path, then other models.
 FALLBACK_MODELS = [
-    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
     "gemini-3.7-flash",
+    "gemini-3.6-flash",
 ]
 
 RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504}
 MAX_REQUEST_BYTES = 10_000_000
-REQUEST_TIMEOUT_SECONDS = 8
+REQUEST_TIMEOUT_SECONDS = 5
 PRIMARY_ATTEMPTS = 2
 
 
@@ -113,8 +115,10 @@ def call_model(model, request_data, api_key, attempts=1):
         if last_status not in RETRYABLE_STATUS or attempt == attempts:
             break
 
-        # Exponential backoff with jitter: about 1–1.5 seconds before retry.
-        time.sleep((1.0 * (2 ** (attempt - 1))) + random.uniform(0, 0.5))
+        # Brief exponential backoff with jitter. Keep it short for serverless runtimes.
+        delay = min(1.5 * (2 ** (attempt - 1)), 3.0) + random.uniform(0, 0.25)
+        log_event(f"retry_wait model={model} seconds={delay:.2f}")
+        time.sleep(delay)
 
     return last_status, last_result
 
