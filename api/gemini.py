@@ -1,10 +1,11 @@
-"""Vercel Serverless Function — Gemini API proxy.
+"""Vercel Serverless Function: Gemini API proxy.
 
 Required Vercel Environment Variable:
     GEMINI_API_KEY
 
-This version logs useful error details to Vercel Runtime Logs without
-printing the API key or the user's request body.
+Primary model is retried once with a short exponential backoff. If it still
+fails, the function tries two fallback models. API keys and request contents
+are never written to logs.
 """
 
 import json
@@ -16,49 +17,45 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler
 
 
-# Keep the configured model names unchanged.
 PRIMARY_MODEL = "gemini-3.8-flash"
-FALLBACK_MODEL = "gemini-3.6-flash"
+FALLBACK_MODELS = [
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+]
 
 RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504}
 MAX_REQUEST_BYTES = 10_000_000
-REQUEST_TIMEOUT_SECONDS = 10
-MAX_ATTEMPTS = 2
+REQUEST_TIMEOUT_SECONDS = 8
+PRIMARY_ATTEMPTS = 2
 
 
 def log_event(message):
-    """Write diagnostic information to Vercel Runtime Logs."""
     print(f"[api/gemini] {message}", flush=True)
 
 
 def safe_error_message(data):
-    """Extract a readable error message without exposing secrets."""
     if not isinstance(data, dict):
-        return str(data)[:1000]
-
+        return str(data)[:800]
     error = data.get("error", data)
-    if isinstance(error, dict):
-        message = error.get("message") or error.get("status") or str(error)
-        code = error.get("code")
-        status = error.get("status")
-        parts = []
-        if code is not None:
-            parts.append(f"code={code}")
-        if status:
-            parts.append(f"status={status}")
-        parts.append(f"message={str(message)[:1000]}")
-        return "; ".join(parts)
-
-    return str(error)[:1000]
+    if not isinstance(error, dict):
+        return str(error)[:800]
+    code = error.get("code")
+    status = error.get("status")
+    message = error.get("message") or status or str(error)
+    parts = []
+    if code is not None:
+        parts.append(f"code={code}")
+    if status:
+        parts.append(f"status={status}")
+    parts.append(f"message={str(message)[:800]}")
+    return "; ".join(parts)
 
 
 def call_gemini(model, request_data, api_key):
-    """Call Gemini and return (HTTP status, decoded response)."""
     url = (
         "https://generativelanguage.googleapis.com/"
         f"v1beta/models/{model}:generateContent"
     )
-
     request = urllib.request.Request(
         url,
         data=json.dumps(request_data).encode("utf-8"),
@@ -68,216 +65,139 @@ def call_gemini(model, request_data, api_key):
         },
         method="POST",
     )
-
-    with urllib.request.urlopen(
-        request, timeout=REQUEST_TIMEOUT_SECONDS
-    ) as response:
+    with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
         raw = response.read().decode("utf-8", errors="replace")
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
-            raise RuntimeError(
-                f"Gemini returned non-JSON response (HTTP {response.status})"
-            )
+            return response.status, {
+                "error": {"message": "Gemini returned an invalid JSON response"}
+            }
         return response.status, data
 
 
-def call_with_retry(model, request_data, api_key):
-    """Call a model, retrying transient errors once."""
+def call_model(model, request_data, api_key, attempts=1):
+    """Return (status, JSON response). Retry only transient failures."""
     last_status = 503
-    last_data = {
-        "error": {"message": "Gemini request did not complete"}
-    }
+    last_result = {"error": {"message": "Gemini request did not complete"}}
 
-    for attempt in range(1, MAX_ATTEMPTS + 1):
+    for attempt in range(1, attempts + 1):
         try:
-            status, data = call_gemini(model, request_data, api_key)
-            if status == 200:
-                log_event(f"model={model} attempt={attempt} status=200")
-            else:
-                log_event(
-                    f"model={model} attempt={attempt} status={status} "
-                    f"error={safe_error_message(data)}"
-                )
-            return status, data
-
-        except urllib.error.HTTPError as error:
-            last_status = error.code
+            last_status, last_result = call_gemini(model, request_data, api_key)
+        except urllib.error.HTTPError as exc:
+            last_status = exc.code
             try:
-                raw = error.read().decode("utf-8", errors="replace")
-                last_data = json.loads(raw)
+                last_result = json.loads(exc.read().decode("utf-8", errors="replace"))
             except (json.JSONDecodeError, UnicodeDecodeError, OSError):
-                last_data = {
-                    "error": {"message": f"HTTP {error.code}: {error.reason}"}
-                }
-
-            log_event(
-                f"model={model} attempt={attempt} status={last_status} "
-                f"error={safe_error_message(last_data)}"
-            )
-
-            if last_status not in RETRYABLE_STATUS:
-                return last_status, last_data
-
-        except (TimeoutError, OSError, urllib.error.URLError) as error:
+                last_result = {"error": {"message": f"HTTP {exc.code}: {exc.reason}"}}
+        except (TimeoutError, OSError, urllib.error.URLError) as exc:
             last_status = 503
-            last_data = {
-                "error": {
-                    "message": (
-                        "Gemini connection/timeout error: "
-                        + str(error)[:500]
-                    )
-                }
+            last_result = {
+                "error": {"message": f"Connection/timeout error: {type(exc).__name__}: {str(exc)[:400]}"}
             }
-            log_event(
-                f"model={model} attempt={attempt} status=503 "
-                f"connection_error={type(error).__name__}: {str(error)[:500]}"
-            )
-
-        except Exception as error:
+        except Exception as exc:
             last_status = 500
-            last_data = {
-                "error": {
-                    "message": (
-                        f"Unexpected Gemini error: {type(error).__name__}: "
-                        f"{str(error)[:500]}"
-                    )
-                }
+            last_result = {
+                "error": {"message": f"Unexpected error: {type(exc).__name__}: {str(exc)[:400]}"}
             }
-            log_event(
-                f"model={model} attempt={attempt} status=500 "
-                f"unexpected_error={type(error).__name__}: {str(error)[:500]}"
-            )
-            # Unexpected errors are usually not fixed by retrying.
-            return last_status, last_data
 
-        if attempt < MAX_ATTEMPTS:
-            time.sleep(0.5 + random.uniform(0, 0.5))
+        if last_status == 200:
+            log_event(f"model={model} attempt={attempt} status=200")
+            return last_status, last_result
 
-    return last_status, last_data
+        log_event(
+            f"model={model} attempt={attempt} status={last_status} "
+            f"error={safe_error_message(last_result)}"
+        )
+
+        if last_status not in RETRYABLE_STATUS or attempt == attempts:
+            break
+
+        # Exponential backoff with jitter: about 1–1.5 seconds before retry.
+        time.sleep((1.0 * (2 ** (attempt - 1))) + random.uniform(0, 0.5))
+
+    return last_status, last_result
 
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
-            content_length_text = self.headers.get("Content-Length", "0")
             try:
-                content_length = int(content_length_text)
+                content_length = int(self.headers.get("Content-Length", "0"))
             except (TypeError, ValueError):
                 self._send_json(400, {"error": {"message": "Invalid Content-Length"}})
                 return
 
             if content_length <= 0 or content_length > MAX_REQUEST_BYTES:
-                self._send_json(
-                    400,
-                    {"error": {"message": "Invalid request body size"}},
-                )
+                self._send_json(400, {"error": {"message": "Invalid request body size"}})
                 return
 
             body = self.rfile.read(content_length)
             try:
                 request_data = json.loads(body.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError):
-                self._send_json(
-                    400, {"error": {"message": "Invalid JSON request"}}
-                )
+                self._send_json(400, {"error": {"message": "Invalid JSON request"}})
                 return
 
             if not isinstance(request_data, dict):
-                self._send_json(
-                    400,
-                    {"error": {"message": "JSON request must be an object"}},
-                )
+                self._send_json(400, {"error": {"message": "JSON request must be an object"}})
                 return
 
             api_key = os.environ.get("GEMINI_API_KEY")
             if not api_key:
                 log_event("configuration_error=GEMINI_API_KEY is missing")
-                self._send_json(
-                    500,
-                    {
-                        "error": {
-                            "message": "GEMINI_API_KEY not configured on server"
-                        }
-                    },
-                )
+                self._send_json(500, {"error": {"message": "GEMINI_API_KEY not configured on server"}})
                 return
 
             log_event("request_started route=/api/gemini")
+            models = [(PRIMARY_MODEL, PRIMARY_ATTEMPTS)] + [
+                (model, 1) for model in FALLBACK_MODELS
+            ]
+            failures = []
 
-            primary_status, primary_result = call_with_retry(
-                PRIMARY_MODEL, request_data, api_key
-            )
+            for index, (model, attempts) in enumerate(models):
+                if index > 0:
+                    log_event(f"trying_fallback model={model}")
 
-            if primary_status == 200:
-                self._send_json(200, primary_result)
-                return
-
-            # Try fallback after transient errors or an unavailable model.
-            if primary_status in RETRYABLE_STATUS or primary_status == 404:
-                log_event(
-                    f"primary_failed model={PRIMARY_MODEL} "
-                    f"status={primary_status}; trying fallback={FALLBACK_MODEL}"
-                )
-                fallback_status, fallback_result = call_with_retry(
-                    FALLBACK_MODEL, request_data, api_key
-                )
-
-                if fallback_status == 200:
-                    log_event(f"fallback_succeeded model={FALLBACK_MODEL}")
-                    self._send_json(200, fallback_result)
+                status, result = call_model(model, request_data, api_key, attempts)
+                if status == 200:
+                    if index > 0:
+                        log_event(f"fallback_succeeded model={model}")
+                    self._send_json(200, result)
                     return
 
-                log_event(
-                    f"both_models_failed primary_status={primary_status} "
-                    f"fallback_status={fallback_status}"
-                )
-                self._send_json(
-                    fallback_status if fallback_status >= 400 else 503,
-                    {
-                        "error": {
-                            "message": "Both Gemini models failed",
-                            "primary_model": PRIMARY_MODEL,
-                            "primary_status": primary_status,
-                            "primary_error": primary_result.get("error", {}),
-                            "fallback_model": FALLBACK_MODEL,
-                            "fallback_status": fallback_status,
-                            "fallback_error": fallback_result.get("error", {}),
-                        }
-                    },
-                )
-                return
+                failures.append({
+                    "model": model,
+                    "status": status,
+                    "error": result.get("error", {}) if isinstance(result, dict) else {},
+                })
 
-            log_event(
-                f"primary_permanent_failure model={PRIMARY_MODEL} "
-                f"status={primary_status} "
-                f"error={safe_error_message(primary_result)}"
-            )
-            self._send_json(
-                primary_status if 400 <= primary_status <= 599 else 502,
-                {
-                    "error": {
-                        "message": "Gemini API request failed",
-                        "model": PRIMARY_MODEL,
-                        "status": primary_status,
-                        "details": primary_result.get("error", {}),
-                    }
-                },
-            )
+                # Auth, permission, or malformed-request errors won't be fixed
+                # by switching models, so stop and return the useful error.
+                if status in {400, 401, 403}:
+                    break
 
-        except Exception as error:
-            log_event(
-                f"handler_error={type(error).__name__}: {str(error)[:500]}"
-            )
-            self._send_json(
-                500,
-                {
-                    "error": {
-                        "message": "Internal server error",
-                        "detail": f"{type(error).__name__}: {str(error)[:300]}",
-                    }
-                },
-            )
+            log_event("all_models_failed " + "; ".join(
+                f"{item['model']}={item['status']}" for item in failures
+            ))
+            final_status = failures[-1]["status"] if failures else 503
+            if final_status < 400 or final_status > 599:
+                final_status = 503
+            self._send_json(final_status, {
+                "error": {
+                    "message": "All configured Gemini models failed",
+                    "failures": failures,
+                }
+            })
+
+        except Exception as exc:
+            log_event(f"handler_error={type(exc).__name__}: {str(exc)[:400]}")
+            self._send_json(500, {
+                "error": {
+                    "message": "Internal server error",
+                    "detail": f"{type(exc).__name__}: {str(exc)[:250]}",
+                }
+            })
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -299,5 +219,4 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, fmt, *args):
-        # Keep normal access logs quiet; diagnostic logs above remain visible.
         return
